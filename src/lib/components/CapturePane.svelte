@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CaptureStageKey, CaptureSummary } from '$lib/types';
-	import { RadioTower, CloudUpload, Cog, Download } from 'lucide-svelte';
+	import { RadioTower, CloudUpload, Cog, Download } from '@lucide/svelte';
 
 	let {
 		stage,

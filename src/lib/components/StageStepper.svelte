@@ -1,7 +1,7 @@
 <script lang="ts" generics="K extends string">
 	import type { StageStatus } from '$lib/types';
 	import { statusClasses } from './stages';
-	import type { Icon } from 'lucide-svelte';
+	import type { Icon } from '@lucide/svelte';
 
 	let {
 		stages,

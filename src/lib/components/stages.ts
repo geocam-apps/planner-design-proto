@@ -8,7 +8,7 @@ import {
 	Cog,
 	Download,
 	type Icon
-} from 'lucide-svelte';
+} from '@lucide/svelte';
 import type { CaptureStageKey, CollectionStageKey, StageStatus } from '$lib/types';
 
 export const COLLECTION_ICONS: Record<CollectionStageKey, typeof Icon> = {

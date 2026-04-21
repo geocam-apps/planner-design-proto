@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import { untrack } from 'svelte';
-	import { ChevronRight, Image } from 'lucide-svelte';
+	import { ChevronRight, Image } from '@lucide/svelte';
 	import type { CaptureStageKey, CaptureSummary } from '$lib/types';
 	import { CAPTURE_STAGES } from '$lib/types';
 	import StageStrip from './StageStrip.svelte';

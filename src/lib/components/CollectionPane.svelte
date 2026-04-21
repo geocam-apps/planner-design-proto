@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CaptureSummary, CollectionStageKey, CollectionSummary } from '$lib/types';
-	import { LoaderCircle, TriangleAlert, Map, ChartLine, Eye } from 'lucide-svelte';
+	import { LoaderCircle, TriangleAlert, Map, ChartLine, Eye } from '@lucide/svelte';
 	import CaptureCard from './CaptureCard.svelte';
 
 	let {

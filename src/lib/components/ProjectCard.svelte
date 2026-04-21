@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { CollectionSummary, ProjectSummary } from '$lib/types';
 	import CollectionCard from './CollectionCard.svelte';
-	import { Layers, LoaderCircle, TriangleAlert, Folder } from 'lucide-svelte';
+	import { Layers, LoaderCircle, TriangleAlert, Folder } from '@lucide/svelte';
 
 	let { project }: { project: ProjectSummary } = $props();
 
