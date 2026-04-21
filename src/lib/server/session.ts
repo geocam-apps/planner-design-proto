@@ -14,7 +14,7 @@ export type SessionUser = {
 };
 
 export const COOKIE_NAME = 'gc_session';
-const DEFAULT_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const DEFAULT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 function getSecret(): string {
 	const s = env.SESSION_SECRET;
