@@ -8,13 +8,15 @@
 		icons,
 		labels,
 		active = $bindable(),
-		order
+		order,
+		highlighted
 	}: {
 		stages: Record<K, StageStatus>;
 		icons: Record<K, typeof Icon>;
 		labels: Record<K, string>;
 		active: K;
 		order: readonly K[];
+		highlighted?: Set<K>;
 	} = $props();
 </script>
 
@@ -23,6 +25,7 @@
 		{@const IconComp = icons[key]}
 		{@const status = stages[key]}
 		{@const isActive = active === key}
+		{@const hit = highlighted?.has(key) ?? false}
 		<button
 			type="button"
 			role="tab"
@@ -30,7 +33,9 @@
 			onclick={() => (active = key)}
 			class="group relative flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:outline-none {isActive
 				? 'bg-white text-slate-900 shadow-sm'
-				: 'text-slate-500 hover:bg-white/60 hover:text-slate-700'}"
+				: 'text-slate-500 hover:bg-white/60 hover:text-slate-700'} {hit
+				? 'outline outline-2 outline-yellow-400 outline-offset-0'
+				: ''}"
 		>
 			<span
 				class="flex size-6 items-center justify-center rounded-md ring-1 {statusClasses(

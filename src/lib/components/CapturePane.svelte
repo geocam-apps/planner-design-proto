@@ -1,18 +1,27 @@
 <script lang="ts">
 	import type { CaptureStageKey, CaptureSummary } from '$lib/types';
 	import { RadioTower, CloudUpload, Cog, Download } from '@lucide/svelte';
+	import Highlight from './Highlight.svelte';
+	import type { CaptureField } from '$lib/search/types';
 
 	let {
 		stage,
-		capture
+		capture,
+		query = '',
+		matchedFields
 	}: {
 		stage: CaptureStageKey;
 		capture: CaptureSummary;
+		query?: string;
+		matchedFields?: Set<CaptureField>;
 	} = $props();
 
 	function fmt(iso: string | null): string {
 		return iso ? new Date(iso).toLocaleString() : '—';
 	}
+
+	const refQuery = $derived(matchedFields?.has('reference') ? query : '');
+	const nameQuery = $derived(matchedFields?.has('name') ? query : '');
 </script>
 
 {#if stage === 'metadata'}
@@ -22,7 +31,13 @@
 		</div>
 		<dl class="grid grid-cols-[minmax(0,120px)_1fr] gap-x-4 gap-y-1 text-slate-600">
 			<dt class="text-slate-400">Reference</dt>
-			<dd class="truncate font-mono">{capture.reference ?? '—'}</dd>
+			<dd class="truncate font-mono">
+				<Highlight text={capture.reference ?? '—'} query={refQuery} />
+			</dd>
+			{#if capture.name}
+				<dt class="text-slate-400">Name</dt>
+				<dd class="truncate"><Highlight text={capture.name} query={nameQuery} /></dd>
+			{/if}
 			<dt class="text-slate-400">Captured at</dt>
 			<dd>{fmt(capture.capturedAt)}</dd>
 			<dt class="text-slate-400">Shot count</dt>

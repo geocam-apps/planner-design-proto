@@ -9,11 +9,15 @@
 	import { COLLECTION_ICONS } from './stages';
 	import CollectionPane from './CollectionPane.svelte';
 	import CardActions from './CardActions.svelte';
+	import Highlight from './Highlight.svelte';
 	import { isHidden } from '$lib/stores/preferences.svelte';
+	import { getProjectSearch } from '$lib/search/state.svelte';
 
 	let { collection }: { collection: CollectionSummary } = $props();
 
-	let expanded = $state(false);
+	const search = getProjectSearch();
+
+	let userExpanded = $state(false);
 	let activeStage = $state<CollectionStageKey>(untrack(() => collection.currentStage));
 
 	const labels = $derived(
@@ -26,8 +30,37 @@
 
 	const hidden = $derived(isHidden('collection', collection.id));
 
+	const ownMatchFields = $derived(
+		search?.matchedCollectionFields(collection.id) ?? new Set<string>()
+	);
+	const hasCaptureMatchBelow = $derived(
+		search?.hasCaptureMatchInCollection(collection.id) ?? false
+	);
+	const hasAnyMatch = $derived(
+		(search?.active ?? false) && (ownMatchFields.size > 0 || hasCaptureMatchBelow)
+	);
+
+	const expanded = $derived(userExpanded || hasAnyMatch);
+
+	// When a descendant capture matches, push the active pane to "capture" so
+	// the captures list actually becomes visible. Only switches on the edge of
+	// search going from inactive → active for this collection.
+	let lastCaptureMatchState = false;
+	$effect(() => {
+		if (hasCaptureMatchBelow && !lastCaptureMatchState) {
+			activeStage = 'capture';
+		}
+		lastCaptureMatchState = hasCaptureMatchBelow;
+	});
+
+	const highlightedStages = $derived.by(() => {
+		const set = new Set<CollectionStageKey>();
+		if (hasCaptureMatchBelow) set.add('capture');
+		return set;
+	});
+
 	function toggle() {
-		expanded = !expanded;
+		userExpanded = !userExpanded;
 	}
 
 	function onKey(e: KeyboardEvent) {
@@ -36,6 +69,8 @@
 			toggle();
 		}
 	}
+
+	const q = $derived(search?.query ?? '');
 </script>
 
 <div
@@ -58,7 +93,10 @@
 		<div class="min-w-0 flex-1">
 			<div class="flex items-center gap-2">
 				<h3 class="truncate text-sm font-semibold text-slate-900">
-					{collection.name ?? collection.slug}
+					<Highlight
+						text={collection.name ?? collection.slug}
+						query={ownMatchFields.has('name') ? q : ''}
+					/>
 				</h3>
 				{#if collection.captureCount > 0}
 					<span class="inline-flex items-center gap-1 text-xs text-slate-500">
@@ -72,7 +110,12 @@
 				{/if}
 			</div>
 			{#if collection.description}
-				<p class="mt-0.5 truncate text-xs text-slate-500">{collection.description}</p>
+				<p class="mt-0.5 truncate text-xs text-slate-500">
+					<Highlight
+						text={collection.description}
+						query={ownMatchFields.has('description') ? q : ''}
+					/>
+				</p>
 			{/if}
 		</div>
 		<CardActions type="collection" id={collection.id} size="sm" />
@@ -81,6 +124,7 @@
 			icons={COLLECTION_ICONS}
 			{labels}
 			current={collection.currentStage}
+			highlighted={highlightedStages}
 			size="sm"
 		/>
 	</div>
@@ -95,6 +139,7 @@
 				{labels}
 				bind:active={activeStage}
 				{order}
+				highlighted={highlightedStages}
 			/>
 			<div class="mt-3 rounded-lg border border-slate-200/80 bg-white p-4">
 				<CollectionPane stage={activeStage} {collection} />

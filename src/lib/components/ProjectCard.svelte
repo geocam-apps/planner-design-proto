@@ -2,15 +2,25 @@
 	import type { CollectionSummary, ProjectSummary } from '$lib/types';
 	import CollectionCard from './CollectionCard.svelte';
 	import CardActions from './CardActions.svelte';
+	import Highlight from './Highlight.svelte';
+	import SearchBox from './SearchBox.svelte';
 	import { ChevronRight, Folder, Layers, LoaderCircle, TriangleAlert } from '@lucide/svelte';
 	import { arrange, isHidden } from '$lib/stores/preferences.svelte';
+	import { createProjectSearch, setProjectSearch } from '$lib/search/state.svelte';
+	import { untrack } from 'svelte';
 
 	let { project }: { project: ProjectSummary } = $props();
 
-	let expanded = $state(false);
+	const search = createProjectSearch(untrack(() => project.slug));
+	setProjectSearch(search);
+
+	let userExpanded = $state(false);
 	let loadState = $state<'idle' | 'loading' | 'loaded' | 'error'>('idle');
 	let loadError = $state<string | null>(null);
 	let collections = $state<CollectionSummary[]>([]);
+
+	// Expand whenever the user toggled open OR a search is active in this project.
+	const expanded = $derived(userExpanded || search.active);
 
 	async function ensureLoaded() {
 		if (loadState === 'loaded' || loadState === 'loading') return;
@@ -41,9 +51,10 @@
 
 	const hidden = $derived(isHidden('project', project.id));
 	const arrangedCollections = $derived(arrange(collections, 'collection'));
+	const matchedFields = $derived(search.matchedProjectFields(project.id));
 
 	function toggle() {
-		expanded = !expanded;
+		userExpanded = !userExpanded;
 	}
 
 	function onKey(e: KeyboardEvent) {
@@ -75,7 +86,10 @@
 		<div class="min-w-0 flex-1">
 			<div class="flex items-center gap-2">
 				<h2 class="truncate text-base font-semibold text-slate-900">
-					{project.name ?? project.reference ?? project.slug}
+					<Highlight
+						text={project.name ?? project.reference ?? project.slug}
+						query={matchedFields.has('name') ? search.query : ''}
+					/>
 				</h2>
 				<span class="rounded-full px-2 py-0.5 text-xs font-medium {statusPill}">
 					{project.status}
@@ -88,7 +102,12 @@
 			</div>
 			<p class="mt-0.5 flex items-center gap-3 text-xs text-slate-500">
 				{#if project.reference && project.reference !== project.name}
-					<span class="font-mono">{project.reference}</span>
+					<span class="font-mono">
+						<Highlight
+							text={project.reference}
+							query={matchedFields.has('reference') ? search.query : ''}
+						/>
+					</span>
 				{/if}
 				<span class="inline-flex items-center gap-1">
 					<Layers size={12} />
@@ -107,6 +126,9 @@
 	</div>
 	{#if expanded}
 		<div class="border-t border-slate-100 bg-slate-50/50 p-4">
+			<div class="mb-3">
+				<SearchBox {search} />
+			</div>
 			{#if loadState === 'loading'}
 				<div class="flex items-center gap-2 px-1 py-2 text-sm text-slate-500">
 					<LoaderCircle size={14} class="animate-spin" />

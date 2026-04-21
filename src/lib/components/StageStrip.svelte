@@ -8,12 +8,14 @@
 		icons,
 		labels,
 		current,
+		highlighted,
 		size = 'md'
 	}: {
 		stages: Record<K, StageStatus>;
 		icons: Record<K, typeof Icon>;
 		labels: Record<K, string>;
 		current?: K;
+		highlighted?: Set<K>;
 		size?: 'sm' | 'md';
 	} = $props();
 
@@ -30,12 +32,15 @@
 		{@const IconComp = icons[key]}
 		{@const status = stages[key]}
 		{@const emphasised = key === current}
+		{@const hit = highlighted?.has(key) ?? false}
 		<div
 			class="flex {dimensions.pill} items-center justify-center rounded-md ring-1 {statusClasses(
 				status,
 				emphasised
-			)}"
-			title="{labels[key]} — {status === 'dark' ? 'not started' : status}"
+			)} {hit ? 'outline outline-2 outline-yellow-400 outline-offset-1' : ''}"
+			title="{labels[key]} — {hit ? 'contains a match — ' : ''}{status === 'dark'
+				? 'not started'
+				: status}"
 		>
 			<IconComp size={dimensions.icon} strokeWidth={2} />
 		</div>

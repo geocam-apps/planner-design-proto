@@ -9,11 +9,16 @@
 	import { CAPTURE_ICONS } from './stages';
 	import CapturePane from './CapturePane.svelte';
 	import CardActions from './CardActions.svelte';
+	import Highlight from './Highlight.svelte';
 	import { isHidden } from '$lib/stores/preferences.svelte';
+	import { getProjectSearch } from '$lib/search/state.svelte';
+	import { captureMatchedStages, type CaptureField } from '$lib/search/types';
 
 	let { capture }: { capture: CaptureSummary } = $props();
 
-	let expanded = $state(false);
+	const search = getProjectSearch();
+
+	let userExpanded = $state(false);
 	let activeStage = $state<CaptureStageKey>(untrack(() => capture.currentStage));
 
 	const labels = $derived(
@@ -27,8 +32,17 @@
 	const displayName = $derived(capture.name ?? capture.reference ?? `#${capture.id}`);
 	const hidden = $derived(isHidden('capture', capture.id));
 
+	const matchedFields = $derived(
+		(search?.matchedCaptureFields(capture.id) ?? new Set()) as Set<CaptureField>
+	);
+	const hasMatch = $derived((search?.active ?? false) && matchedFields.size > 0);
+	const expanded = $derived(userExpanded || hasMatch);
+	const highlightedStages = $derived(captureMatchedStages(matchedFields));
+
+	const q = $derived(search?.query ?? '');
+
 	function toggle() {
-		expanded = !expanded;
+		userExpanded = !userExpanded;
 	}
 
 	function onKey(e: KeyboardEvent) {
@@ -37,6 +51,7 @@
 			toggle();
 		}
 	}
+
 </script>
 
 <div
@@ -63,7 +78,12 @@
 		</div>
 		<div class="min-w-0 flex-1">
 			<div class="flex items-center gap-2">
-				<p class="truncate font-mono text-xs text-slate-700">{displayName}</p>
+				<p class="truncate font-mono text-xs text-slate-700">
+					<Highlight
+						text={displayName}
+						query={matchedFields.has('name') || matchedFields.has('reference') ? q : ''}
+					/>
+				</p>
 				{#if hidden}
 					<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-medium text-slate-600">
 						hidden
@@ -87,6 +107,7 @@
 			icons={CAPTURE_ICONS}
 			{labels}
 			current={capture.currentStage}
+			highlighted={highlightedStages}
 			size="sm"
 		/>
 	</div>
@@ -101,9 +122,15 @@
 				{labels}
 				bind:active={activeStage}
 				{order}
+				highlighted={highlightedStages}
 			/>
 			<div class="mt-3 rounded-lg border border-slate-200/70 bg-white p-3">
-				<CapturePane stage={activeStage} {capture} />
+				<CapturePane
+					stage={activeStage}
+					{capture}
+					query={q}
+					{matchedFields}
+				/>
 			</div>
 		</div>
 	{/if}
