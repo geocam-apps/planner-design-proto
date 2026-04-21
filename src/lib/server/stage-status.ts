@@ -8,7 +8,6 @@ import { CAPTURE_STAGES, COLLECTION_STAGES } from '$lib/types';
 
 export type CollectionCounts = {
 	docs: number;
-	comments: number;
 	captures: number;
 	capturesProcessed: number;
 	capturesWithIssues: number;
@@ -17,7 +16,9 @@ export type CollectionCounts = {
 
 export function computeCollectionStages(counts: CollectionCounts): StageMap<CollectionStageKey> {
 	const plan: StageStatus = counts.docs > 0 || counts.hasDescription ? 'green' : 'dark';
-	const analysis: StageStatus = counts.comments > 0 ? 'green' : 'dark';
+	// Analysis will have a dedicated artifact (complexity, GNSS base-station distance, …).
+	// Until that exists, leave it dark so the UI doesn't lie.
+	const analysis: StageStatus = 'dark';
 	let capture: StageStatus = 'dark';
 	if (counts.captures > 0) {
 		capture = counts.capturesWithIssues > 0 ? 'orange' : 'green';
