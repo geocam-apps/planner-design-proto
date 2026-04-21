@@ -5,6 +5,7 @@ import {
 	currentCollectionStage,
 	type CollectionCounts
 } from '$lib/server/stage-status';
+import { projectScope, requireUser } from '$lib/server/scope';
 import type { CollectionSummary } from '$lib/types';
 import type { RequestHandler } from './$types';
 
@@ -23,9 +24,13 @@ type Row = {
 	captures_with_issues: string;
 };
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const user = requireUser(locals);
 	const projectSlug = params.slug;
 	if (!projectSlug) throw error(400, 'missing project slug');
+
+	const scope = projectScope(user, 'p.id', 'p.client_id', 2);
+	if (scope.empty) return json({ collections: [] });
 
 	try {
 		const result = await query<Row>(
@@ -59,8 +64,9 @@ export const GET: RequestHandler = async ({ params }) => {
 			  WHERE cm.kind = 'collection'
 			    AND cm.deleted_at IS NULL
 			    AND p.slug = $1
+			    AND ${scope.sql}
 			  ORDER BY cm.created_at DESC`,
-			[projectSlug]
+			[projectSlug, ...scope.params]
 		);
 
 		const collections: CollectionSummary[] = result.rows.map((r) => {

@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import { query } from '$lib/server/db';
+import { projectScope, requireUser } from '$lib/server/scope';
 import type { RequestHandler } from './$types';
 
 type ProjectRow = {
@@ -17,7 +18,11 @@ type ProjectRow = {
 	capture_count: string;
 };
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ locals }) => {
+	const user = requireUser(locals);
+	const scope = projectScope(user, 'p.id', 'p.client_id', 1);
+	if (scope.empty) return json({ projects: [] });
+
 	try {
 		const result = await query<ProjectRow>(
 			`SELECT p.id::text,
@@ -37,8 +42,10 @@ export const GET: RequestHandler = async () => {
 			        (SELECT count(*) FROM captures c
 			           WHERE c.project_id = p.id
 			             AND c.deleted_at IS NULL) AS capture_count
-			 FROM projects p
-			 ORDER BY p.updated_at DESC`
+			   FROM projects p
+			  WHERE ${scope.sql}
+			  ORDER BY p.updated_at DESC`,
+			scope.params
 		);
 
 		const projects = result.rows.map((r) => ({

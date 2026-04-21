@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import { query } from '$lib/server/db';
+import { projectScope, requireUser } from '$lib/server/scope';
 import type { RequestHandler } from './$types';
 
 const PROJECT_FIELDS = ['name', 'reference', 'description', 'abbreviation'] as const;
@@ -24,7 +25,8 @@ type CaptureMatch = {
 	fields: CaptureField[];
 };
 
-export const GET: RequestHandler = async ({ params, url }) => {
+export const GET: RequestHandler = async ({ params, url, locals }) => {
+	const user = requireUser(locals);
 	const projectSlug = params.slug;
 	const q = (url.searchParams.get('q') ?? '').trim();
 	if (!projectSlug) throw error(400, 'missing project slug');
@@ -38,16 +40,23 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		});
 	}
 
+	const scope = projectScope(user, 'p.id', 'p.client_id', 3);
+	if (scope.empty) {
+		return json({ query: q, projects: [], collections: [], captures: [] });
+	}
+
 	const pattern = `%${q.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
+	const scopedParams = [projectSlug, pattern, ...scope.params];
 
 	try {
 		const projResult = await query<Record<ProjectField, string | null> & { id: string }>(
-			`SELECT id::text, name, reference, description, abbreviation
-			   FROM projects
-			  WHERE slug = $1
-			    AND (name ILIKE $2 OR reference ILIKE $2
-			         OR description ILIKE $2 OR abbreviation ILIKE $2)`,
-			[projectSlug, pattern]
+			`SELECT p.id::text, p.name, p.reference, p.description, p.abbreviation
+			   FROM projects p
+			  WHERE p.slug = $1
+			    AND (p.name ILIKE $2 OR p.reference ILIKE $2
+			         OR p.description ILIKE $2 OR p.abbreviation ILIKE $2)
+			    AND ${scope.sql}`,
+			scopedParams
 		);
 
 		const collResult = await query<
@@ -59,8 +68,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			  WHERE p.slug = $1
 			    AND cm.kind = 'collection'
 			    AND cm.deleted_at IS NULL
-			    AND (cm.name ILIKE $2 OR cm.description ILIKE $2)`,
-			[projectSlug, pattern]
+			    AND (cm.name ILIKE $2 OR cm.description ILIKE $2)
+			    AND ${scope.sql}`,
+			scopedParams
 		);
 
 		const capResult = await query<
@@ -83,8 +93,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			    AND cap.deleted_at IS NULL
 			    AND (cap.name ILIKE $2 OR cap.reference ILIKE $2
 			         OR cap.address ILIKE $2 OR cap.segment_names ILIKE $2
-			         OR cap.country ILIKE $2)`,
-			[projectSlug, pattern]
+			         OR cap.country ILIKE $2)
+			    AND ${scope.sql}`,
+			scopedParams
 		);
 
 		const needle = q.toLowerCase();

@@ -5,6 +5,7 @@ import {
 	currentCaptureStage,
 	type CaptureStageInputs
 } from '$lib/server/stage-status';
+import { projectScope, requireUser } from '$lib/server/scope';
 import type { CaptureSummary } from '$lib/types';
 import type { RequestHandler } from './$types';
 
@@ -23,9 +24,13 @@ type Row = {
 	output_count: string;
 };
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const user = requireUser(locals);
 	const collectionSlug = params.slug;
 	if (!collectionSlug) throw error(400, 'missing collection slug');
+
+	const scope = projectScope(user, 'p.id', 'p.client_id', 2);
+	if (scope.empty) return json({ captures: [] });
 
 	try {
 		const result = await query<Row>(
@@ -45,12 +50,14 @@ export const GET: RequestHandler = async ({ params }) => {
 			   FROM captures cap
 			   JOIN cells cl ON cl.id = cap.collection_cell_id
 			   JOIN cell_maps cm ON cm.id = cl.cell_map_id
+			   JOIN projects p ON p.id = cm.project_id
 			  WHERE cm.slug = $1
 			    AND cm.kind = 'collection'
 			    AND cm.deleted_at IS NULL
 			    AND cap.deleted_at IS NULL
+			    AND ${scope.sql}
 			  ORDER BY COALESCE(cap.captured_at, cap.created_at) DESC`,
-			[collectionSlug]
+			[collectionSlug, ...scope.params]
 		);
 
 		const captures: CaptureSummary[] = result.rows.map((r) => {
