@@ -1,6 +1,12 @@
 #!/bin/sh
+# Entrypoint for running the web app.
+# Cloudflare tunnel points at :8080, so the dev server binds there.
+set -e
 
-# This is the entrypoint for running the web app
-# Blank to start with, claude can add based on what framework used
-# Make sure web server listens to :8080, as that is what the cloudflare tunnel will point to
+cd "$(dirname "$0")"
 
+if [ ! -d node_modules ]; then
+  npm install
+fi
+
+exec npm run dev -- --host 0.0.0.0 --port 8080
