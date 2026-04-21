@@ -1,29 +1,35 @@
 <script lang="ts">
-	import Toolbar from '$lib/components/Toolbar.svelte';
-	import DrawingCanvas from '$lib/components/DrawingCanvas.svelte';
+	import ProjectCard from '$lib/components/ProjectCard.svelte';
+	import type { PageData } from './$types';
 
-	let mode = $state<'draw' | 'edit'>('draw');
-	let smoothing = $state(2.5);
-	let strokeWidth = $state(4);
-	let color = $state('#0f172a');
-	let clearSignal = $state(0);
-
-	function handleClear() {
-		clearSignal++;
-	}
+	let { data }: { data: PageData } = $props();
 </script>
 
-<main class="relative h-screen w-screen overflow-hidden">
-	<DrawingCanvas {mode} {smoothing} {strokeWidth} {color} {clearSignal} />
-	<Toolbar bind:mode bind:smoothing bind:strokeWidth bind:color onClear={handleClear} />
+<main class="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-6 py-10">
+	<header class="flex items-end justify-between gap-4">
+		<div>
+			<h1 class="text-2xl font-semibold tracking-tight text-slate-900">Projects</h1>
+			<p class="mt-1 text-sm text-slate-500">
+				Plan collections, run captures, review outputs.
+			</p>
+		</div>
+		<a
+			href="/drawing"
+			class="text-xs font-medium text-slate-500 underline-offset-4 hover:text-slate-700 hover:underline"
+		>
+			Drawing prototype →
+		</a>
+	</header>
 
-	<div
-		class="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white/80 px-3 py-1 text-xs text-slate-500 shadow-sm backdrop-blur"
-	>
-		{#if mode === 'draw'}
-			Draw with your pointer. Release to smooth into an editable curve.
-		{:else}
-			Click a stroke to select, then drag its points or handles.
-		{/if}
-	</div>
+	{#if data.projects.length === 0}
+		<p class="rounded-xl border border-dashed border-slate-200 p-10 text-center text-slate-500">
+			No projects yet.
+		</p>
+	{:else}
+		<div class="flex flex-col gap-3">
+			{#each data.projects as project (project.id)}
+				<ProjectCard {project} />
+			{/each}
+		</div>
+	{/if}
 </main>
