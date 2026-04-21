@@ -9,5 +9,8 @@ export default defineConfig({
 		port: 8080,
 		strictPort: true,
 		allowedHosts: true
+	},
+	optimizeDeps: {
+		exclude: ['svelte', 'svelte/legacy', 'svelte/internal/client']
 	}
 });

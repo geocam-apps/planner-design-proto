@@ -8,6 +8,8 @@
 	import StageStepper from './StageStepper.svelte';
 	import { COLLECTION_ICONS } from './stages';
 	import CollectionPane from './CollectionPane.svelte';
+	import CardActions from './CardActions.svelte';
+	import { isHidden } from '$lib/stores/preferences.svelte';
 
 	let { collection }: { collection: CollectionSummary } = $props();
 
@@ -21,18 +23,33 @@
 		>
 	);
 	const order = COLLECTION_STAGES.map((s) => s.key);
+
+	const hidden = $derived(isHidden('collection', collection.id));
+
+	function toggle() {
+		expanded = !expanded;
+	}
+
+	function onKey(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			toggle();
+		}
+	}
 </script>
 
 <div
 	class="overflow-hidden rounded-xl border border-slate-200/80 bg-white transition-shadow {expanded
 		? 'shadow-sm shadow-slate-900/10'
-		: ''}"
+		: ''} {hidden ? 'opacity-60' : ''}"
 >
-	<button
-		type="button"
-		onclick={() => (expanded = !expanded)}
+	<div
+		role="button"
+		tabindex="0"
 		aria-expanded={expanded}
-		class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-inset focus-visible:outline-none"
+		onclick={toggle}
+		onkeydown={onKey}
+		class="flex cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-inset focus-visible:outline-none"
 	>
 		<ChevronRight
 			size={16}
@@ -48,11 +65,17 @@
 						<Layers size={11} />{collection.captureCount}
 					</span>
 				{/if}
+				{#if hidden}
+					<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+						hidden
+					</span>
+				{/if}
 			</div>
 			{#if collection.description}
 				<p class="mt-0.5 truncate text-xs text-slate-500">{collection.description}</p>
 			{/if}
 		</div>
+		<CardActions type="collection" id={collection.id} size="sm" />
 		<StageStrip
 			stages={collection.stages}
 			icons={COLLECTION_ICONS}
@@ -60,7 +83,7 @@
 			current={collection.currentStage}
 			size="sm"
 		/>
-	</button>
+	</div>
 	{#if expanded}
 		<div
 			transition:slide={{ duration: 180 }}

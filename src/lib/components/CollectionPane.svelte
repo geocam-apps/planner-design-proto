@@ -2,6 +2,7 @@
 	import type { CaptureSummary, CollectionStageKey, CollectionSummary } from '$lib/types';
 	import { LoaderCircle, TriangleAlert, Map, ChartLine, Eye } from '@lucide/svelte';
 	import CaptureCard from './CaptureCard.svelte';
+	import { arrange } from '$lib/stores/preferences.svelte';
 
 	let {
 		stage,
@@ -85,11 +86,18 @@
 		{:else if captureState === 'loaded' && captures.length === 0}
 			<p class="py-2 text-xs text-slate-500">No captures recorded in this collection yet.</p>
 		{:else if captureState === 'loaded'}
-			<div class="flex flex-col gap-2">
-				{#each captures as capture (capture.id)}
-					<CaptureCard {capture} />
-				{/each}
-			</div>
+			{@const visible = arrange(captures, 'capture')}
+			{#if visible.length === 0}
+				<p class="py-2 text-xs text-slate-500">
+					All captures in this collection are hidden. Toggle "Show hidden" to see them.
+				</p>
+			{:else}
+				<div class="flex flex-col gap-2">
+					{#each visible as capture (capture.id)}
+						<CaptureCard {capture} />
+					{/each}
+				</div>
+			{/if}
 		{/if}
 	</div>
 {:else if stage === 'review'}
