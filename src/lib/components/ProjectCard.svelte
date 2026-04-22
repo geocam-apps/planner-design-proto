@@ -4,7 +4,7 @@
 	import CardActions from './CardActions.svelte';
 	import Highlight from './Highlight.svelte';
 	import SearchBox from './SearchBox.svelte';
-	import { ChevronRight, Folder, Layers, LoaderCircle, TriangleAlert } from '@lucide/svelte';
+	import { ChevronRight, Layers, LoaderCircle, TriangleAlert } from '@lucide/svelte';
 	import { arrange, isHidden } from '$lib/stores/preferences.svelte';
 	import { createProjectSearch, setProjectSearch } from '$lib/search/state.svelte';
 	import { untrack } from 'svelte';
@@ -41,13 +41,20 @@
 		if (expanded) ensureLoaded();
 	});
 
-	const statusPill = $derived(
-		project.status === 'active'
-			? 'bg-emerald-100 text-emerald-700'
-			: project.status === 'planning'
-				? 'bg-sky-100 text-sky-700'
-				: 'bg-slate-100 text-slate-600'
-	);
+	const statusStyle = $derived.by(() => {
+		switch (project.status) {
+			case 'active':
+				return 'bg-emerald-500 text-white ring-emerald-500/30';
+			case 'planning':
+				return 'bg-sky-500 text-white ring-sky-500/30';
+			case 'complete':
+				return 'bg-slate-800 text-white ring-slate-900/20';
+			case 'archived':
+				return 'bg-slate-200 text-slate-500 ring-slate-400/20';
+			default:
+				return 'bg-slate-200 text-slate-600 ring-slate-400/20';
+		}
+	});
 
 	const hidden = $derived(isHidden('project', project.id));
 	const arrangedCollections = $derived(arrange(collections, 'collection'));
@@ -78,11 +85,13 @@
 		onkeydown={onKey}
 		class="flex cursor-pointer items-center gap-4 px-5 py-4 transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-inset focus-visible:outline-none"
 	>
-		<div
-			class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 ring-1 ring-slate-200"
+		<span
+			class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-wide ring-1 ring-inset {statusStyle}"
+			aria-label="Status: {project.status}"
+			title="Status: {project.status}"
 		>
-			<Folder size={18} />
-		</div>
+			{project.status}
+		</span>
 		<div class="min-w-0 flex-1">
 			<div class="flex items-center gap-2">
 				<h2 class="truncate text-base font-semibold text-slate-900">
@@ -91,9 +100,6 @@
 						query={matchedFields.has('name') ? search.query : ''}
 					/>
 				</h2>
-				<span class="rounded-full px-2 py-0.5 text-xs font-medium {statusPill}">
-					{project.status}
-				</span>
 				{#if hidden}
 					<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600">
 						hidden
