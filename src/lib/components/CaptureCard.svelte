@@ -78,11 +78,15 @@
 		</div>
 		<div class="min-w-0 flex-1">
 			<div class="flex items-center gap-2">
-				<p class="truncate font-mono text-xs text-slate-700">
-					<Highlight
-						text={displayName}
-						query={matchedFields.has('name') || matchedFields.has('reference') ? q : ''}
-					/>
+				<p class="truncate text-sm font-medium text-slate-800">
+					{#if capture.capturedAt}
+						{new Date(capture.capturedAt).toLocaleString()}
+					{:else}
+						—
+					{/if}
+					{#if capture.sqliteShotCount}
+						<span class="font-normal text-slate-500">· {capture.sqliteShotCount} shots</span>
+					{/if}
 				</p>
 				{#if hidden}
 					<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-medium text-slate-600">
@@ -90,15 +94,11 @@
 					</span>
 				{/if}
 			</div>
-			<p class="text-[11px] text-slate-400">
-				{#if capture.capturedAt}
-					{new Date(capture.capturedAt).toLocaleString()}
-				{:else}
-					—
-				{/if}
-				{#if capture.sqliteShotCount}
-					· {capture.sqliteShotCount} shots
-				{/if}
+			<p class="truncate font-mono text-[11px] text-slate-400">
+				<Highlight
+					text={displayName}
+					query={matchedFields.has('name') || matchedFields.has('reference') ? q : ''}
+				/>
 			</p>
 		</div>
 		<CardActions type="capture" id={capture.id} size="sm" />
