@@ -63,6 +63,19 @@ export interface CaptureStageDef {
 	label: string;
 }
 
+export interface SegmentSummary {
+	id: string;
+	name: string | null;
+	number: number | null;
+	kind: string;
+	shotCount: number;
+}
+
+export interface CaptureDetail {
+	segments: SegmentSummary[];
+	metadata: Record<string, unknown>;
+}
+
 export const COLLECTION_STAGES: CollectionStageDef[] = [
 	{ key: 'plan', label: 'Plan' },
 	{ key: 'analysis', label: 'Analysis' },
