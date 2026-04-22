@@ -920,7 +920,7 @@
 	bind:this={container}
 	role="application"
 	aria-label="Drawing surface"
-	class="absolute inset-0 {mode === 'draw'
+	class="absolute inset-0 isolate {mode === 'draw'
 		? 'cursor-crosshair'
 		: 'cursor-default'} {dragOver ? 'ring-4 ring-inset ring-sky-400' : ''} {drawing.map.enabled
 		? ''
@@ -935,25 +935,27 @@
 	ondrop={onDrop}
 	onwheel={onWheel}
 >
-	<!-- Leaflet map: sits underneath everything. z-0. Always present in the
-	     DOM so we can initialise it lazily; hidden when the toggle is off. -->
+	<!-- Leaflet map: sits underneath everything. Always in the DOM so we can
+	     initialise it lazily; hidden when the toggle is off. The outer wrapper
+	     has `isolate`, so Leaflet's internal z-indexes (which go up to ~700)
+	     stay bounded to this stacking context. -->
 	<div
 		bind:this={mapEl}
-		class="absolute inset-0 {drawing.map.enabled ? 'block' : 'hidden'}"
+		class="absolute inset-0 z-0 {drawing.map.enabled ? 'block' : 'hidden'}"
 		aria-hidden={!drawing.map.enabled}
 	></div>
 
-	<!-- Paper.js canvas: transparent, hosts images + strokes. z-1. -->
+	<!-- Paper.js canvas: transparent, hosts images + strokes. -->
 	<canvas
 		bind:this={canvas}
-		class="absolute inset-0 h-full w-full"
+		class="absolute inset-0 z-10 h-full w-full"
 		aria-label="Drawing canvas"
 	></canvas>
 
-	<!-- Live perfect-freehand preview SVG: z-2, no pointer events. -->
+	<!-- Live perfect-freehand preview SVG, no pointer events. -->
 	{#if livePathData}
 		<svg
-			class="pointer-events-none absolute inset-0 h-full w-full"
+			class="pointer-events-none absolute inset-0 z-20 h-full w-full"
 			aria-hidden="true"
 		>
 			<path d={livePathData} fill={color} />
@@ -962,7 +964,7 @@
 
 	{#if dragOver}
 		<div
-			class="pointer-events-none absolute inset-0 flex items-center justify-center bg-sky-50/40"
+			class="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-sky-50/40"
 		>
 			<div class="rounded-xl border-2 border-dashed border-sky-400 bg-white/90 px-4 py-2 text-sm font-medium text-sky-700 shadow-sm">
 				Drop image to attach
@@ -973,7 +975,7 @@
 	{#if drawing.map.enabled}
 		<!-- Minimal zoom control that sits above the canvas so the user can
 		     still zoom without scrolling (wheel works too). -->
-		<div class="absolute right-4 bottom-16 z-10 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white/90 shadow-sm backdrop-blur">
+		<div class="absolute right-4 bottom-16 z-40 flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white/90 shadow-sm backdrop-blur">
 			<button
 				type="button"
 				onclick={() => zoomBy(1)}
