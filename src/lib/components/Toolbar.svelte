@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { ImagePlus, Map as MapIcon, Search, Loader2 } from '@lucide/svelte';
+
 	type Mode = 'draw' | 'edit';
 
 	let {
@@ -6,13 +8,19 @@
 		smoothing = $bindable(),
 		strokeWidth = $bindable(),
 		color = $bindable(),
-		onClear
+		mapEnabled = $bindable(),
+		onClear,
+		onAddImage,
+		onGeocode
 	}: {
 		mode: Mode;
 		smoothing: number;
 		strokeWidth: number;
 		color: string;
+		mapEnabled: boolean;
 		onClear: () => void;
+		onAddImage: (files: FileList) => void;
+		onGeocode: (query: string) => Promise<void>;
 	} = $props();
 
 	const presets = [
@@ -27,6 +35,38 @@
 
 	function setPreset(v: number) {
 		smoothing = v;
+	}
+
+	let fileInput: HTMLInputElement;
+	function openFilePicker() {
+		fileInput?.click();
+	}
+	function onFilePicked(e: Event) {
+		const target = e.target as HTMLInputElement;
+		if (target.files && target.files.length) {
+			// Copy the FileList into a stable array — clearing the input's
+			// value below mutates the live FileList, which would empty out the
+			// reference we just passed up to the parent.
+			const copy = new DataTransfer();
+			for (const f of Array.from(target.files)) copy.items.add(f);
+			onAddImage(copy.files);
+		}
+		// Reset so picking the same file twice re-fires `change`.
+		target.value = '';
+	}
+
+	let query = $state('');
+	let geocoding = $state(false);
+	async function submitGeocode(e: SubmitEvent) {
+		e.preventDefault();
+		const q = query.trim();
+		if (!q) return;
+		geocoding = true;
+		try {
+			await onGeocode(q);
+		} finally {
+			geocoding = false;
+		}
 	}
 </script>
 
@@ -147,6 +187,70 @@
 			<input type="color" bind:value={color} class="h-8 w-8 -translate-x-1 -translate-y-1 cursor-pointer" />
 		</label>
 	</div>
+
+	<div class="h-6 w-px bg-slate-200"></div>
+
+	<!-- Add image -->
+	<button
+		type="button"
+		onclick={openFilePicker}
+		class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:outline-none"
+		aria-label="Add image"
+		title="Add image"
+	>
+		<ImagePlus class="size-4" />
+		<span>Image</span>
+	</button>
+	<input
+		bind:this={fileInput}
+		type="file"
+		accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+		multiple
+		class="hidden"
+		onchange={onFilePicked}
+	/>
+
+	<!-- Map toggle -->
+	<button
+		type="button"
+		role="switch"
+		aria-checked={mapEnabled}
+		aria-label="Toggle map background"
+		onclick={() => (mapEnabled = !mapEnabled)}
+		class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:outline-none {mapEnabled
+			? 'bg-sky-100 text-sky-700 hover:bg-sky-200'
+			: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}"
+		title="Toggle map background"
+	>
+		<MapIcon class="size-4" />
+		<span>Map</span>
+	</button>
+
+	<!-- Address search (only useful with map on, but shown always so the user
+	     can tee up a search and then toggle) -->
+	<form onsubmit={submitGeocode} class="flex items-center gap-1">
+		<div class="relative">
+			<Search class="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-slate-400" />
+			<input
+				type="text"
+				bind:value={query}
+				placeholder="Address or place"
+				aria-label="Search address"
+				class="w-44 rounded-lg border border-slate-200 bg-white py-1.5 pr-2 pl-7 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-500 focus:outline-none"
+			/>
+		</div>
+		<button
+			type="submit"
+			disabled={geocoding || !query.trim()}
+			class="rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:outline-none disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+		>
+			{#if geocoding}
+				<Loader2 class="size-4 animate-spin" />
+			{:else}
+				Go
+			{/if}
+		</button>
+	</form>
 
 	<div class="h-6 w-px bg-slate-200"></div>
 
