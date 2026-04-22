@@ -24,6 +24,8 @@ type Row = {
 	output_count: string;
 };
 
+const UNASSIGNED_PREFIX = '__unassigned-';
+
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const user = requireUser(locals);
 	const collectionSlug = params.slug;
@@ -33,32 +35,59 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	if (scope.empty) return json({ captures: [] });
 
 	try {
-		const result = await query<Row>(
-			`SELECT cap.id::text,
-			        cap.name,
-			        cap.reference,
-			        cap.project_id::text,
-			        cl.cell_map_id::text AS cell_map_id,
-			        cap.captured_at,
-			        cap.uploaded_at,
-			        cap.shot_load_started_at,
-			        cap.shot_load_completed_at,
-			        cap.sqlite_shot_count,
-			        cap.missing_image_file_count,
-			        (SELECT count(*) FROM outputs o
-			           WHERE o.cell_id = cap.collection_cell_id)::text AS output_count
-			   FROM captures cap
-			   JOIN cells cl ON cl.id = cap.collection_cell_id
-			   JOIN cell_maps cm ON cm.id = cl.cell_map_id
-			   JOIN projects p ON p.id = cm.project_id
-			  WHERE cm.slug = $1
-			    AND cm.kind = 'collection'
-			    AND cm.deleted_at IS NULL
-			    AND cap.deleted_at IS NULL
-			    AND ${scope.sql}
-			  ORDER BY COALESCE(cap.captured_at, cap.created_at) DESC`,
-			[collectionSlug, ...scope.params]
-		);
+		let result;
+		if (collectionSlug.startsWith(UNASSIGNED_PREFIX)) {
+			const projectSlug = collectionSlug.slice(UNASSIGNED_PREFIX.length);
+			result = await query<Row>(
+				`SELECT cap.id::text,
+				        cap.name,
+				        cap.reference,
+				        cap.project_id::text,
+				        NULL::text AS cell_map_id,
+				        cap.captured_at,
+				        cap.uploaded_at,
+				        cap.shot_load_started_at,
+				        cap.shot_load_completed_at,
+				        cap.sqlite_shot_count,
+				        cap.missing_image_file_count,
+				        '0'::text AS output_count
+				   FROM captures cap
+				   JOIN projects p ON p.id = cap.project_id
+				  WHERE p.slug = $1
+				    AND cap.deleted_at IS NULL
+				    AND cap.collection_cell_id IS NULL
+				    AND ${scope.sql}
+				  ORDER BY COALESCE(cap.captured_at, cap.created_at) DESC`,
+				[projectSlug, ...scope.params]
+			);
+		} else {
+			result = await query<Row>(
+				`SELECT cap.id::text,
+				        cap.name,
+				        cap.reference,
+				        cap.project_id::text,
+				        cl.cell_map_id::text AS cell_map_id,
+				        cap.captured_at,
+				        cap.uploaded_at,
+				        cap.shot_load_started_at,
+				        cap.shot_load_completed_at,
+				        cap.sqlite_shot_count,
+				        cap.missing_image_file_count,
+				        (SELECT count(*) FROM outputs o
+				           WHERE o.cell_id = cap.collection_cell_id)::text AS output_count
+				   FROM captures cap
+				   JOIN cells cl ON cl.id = cap.collection_cell_id
+				   JOIN cell_maps cm ON cm.id = cl.cell_map_id
+				   JOIN projects p ON p.id = cm.project_id
+				  WHERE cm.slug = $1
+				    AND cm.kind = 'collection'
+				    AND cm.deleted_at IS NULL
+				    AND cap.deleted_at IS NULL
+				    AND ${scope.sql}
+				  ORDER BY COALESCE(cap.captured_at, cap.created_at) DESC`,
+				[collectionSlug, ...scope.params]
+			);
+		}
 
 		const captures: CaptureSummary[] = result.rows.map((r) => {
 			const inputs: CaptureStageInputs = {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import { untrack } from 'svelte';
-	import { ChevronRight, Layers } from '@lucide/svelte';
+	import { ChevronRight, Layers, Inbox } from '@lucide/svelte';
 	import type { CollectionStageKey, CollectionSummary } from '$lib/types';
 	import { COLLECTION_STAGES } from '$lib/types';
 	import StageStrip from './StageStrip.svelte';
@@ -16,6 +16,7 @@
 	let { collection }: { collection: CollectionSummary } = $props();
 
 	const search = getProjectSearch();
+	const isVirtual = $derived(collection.virtual === true);
 
 	let userExpanded = $state(false);
 	let activeStage = $state<CollectionStageKey>(untrack(() => collection.currentStage));
@@ -74,7 +75,9 @@
 </script>
 
 <div
-	class="overflow-hidden rounded-xl border border-slate-200/80 bg-white transition-shadow {expanded
+	class="overflow-hidden rounded-xl transition-shadow {isVirtual
+		? 'border border-dashed border-slate-300 bg-slate-50/40'
+		: 'border border-slate-200/80 bg-white'} {expanded
 		? 'shadow-sm shadow-slate-900/10'
 		: ''} {hidden ? 'opacity-60' : ''}"
 >
@@ -90,9 +93,21 @@
 			size={16}
 			class="shrink-0 text-slate-400 transition-transform {expanded ? 'rotate-90' : ''}"
 		/>
+		{#if isVirtual}
+			<div
+				class="flex size-6 shrink-0 items-center justify-center rounded-md bg-slate-200/60 text-slate-500"
+				aria-hidden="true"
+			>
+				<Inbox size={12} />
+			</div>
+		{/if}
 		<div class="min-w-0 flex-1">
 			<div class="flex items-center gap-2">
-				<h3 class="truncate text-sm font-semibold text-slate-900">
+				<h3
+					class="truncate text-sm font-semibold {isVirtual
+						? 'italic text-slate-600'
+						: 'text-slate-900'}"
+				>
 					<Highlight
 						text={collection.name ?? collection.slug}
 						query={ownMatchFields.has('name') ? q : ''}
@@ -118,31 +133,38 @@
 				</p>
 			{/if}
 		</div>
-		<CardActions type="collection" id={collection.id} size="sm" />
-		<StageStrip
-			stages={collection.stages}
-			icons={COLLECTION_ICONS}
-			{labels}
-			current={collection.currentStage}
-			highlighted={highlightedStages}
-			size="sm"
-		/>
+		{#if !isVirtual}
+			<CardActions type="collection" id={collection.id} size="sm" />
+			<StageStrip
+				stages={collection.stages}
+				icons={COLLECTION_ICONS}
+				{labels}
+				current={collection.currentStage}
+				highlighted={highlightedStages}
+				size="sm"
+			/>
+		{/if}
 	</div>
 	{#if expanded}
 		<div
 			transition:slide={{ duration: 180 }}
 			class="border-t border-slate-100 bg-slate-50/70 p-3"
 		>
-			<StageStepper
-				stages={collection.stages}
-				icons={COLLECTION_ICONS}
-				{labels}
-				bind:active={activeStage}
-				{order}
-				highlighted={highlightedStages}
-			/>
-			<div class="mt-3 rounded-lg border border-slate-200/80 bg-white p-4">
-				<CollectionPane stage={activeStage} {collection} />
+			{#if !isVirtual}
+				<StageStepper
+					stages={collection.stages}
+					icons={COLLECTION_ICONS}
+					{labels}
+					bind:active={activeStage}
+					{order}
+					highlighted={highlightedStages}
+				/>
+			{/if}
+			<div class="{isVirtual ? '' : 'mt-3'} rounded-lg border border-slate-200/80 bg-white p-4">
+				<CollectionPane
+					stage={isVirtual ? 'capture' : activeStage}
+					{collection}
+				/>
 			</div>
 		</div>
 	{/if}

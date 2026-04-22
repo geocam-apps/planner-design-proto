@@ -93,6 +93,67 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			};
 		});
 
+		// Append a virtual "Unassigned" collection listing captures that belong
+		// to the project but are not linked to any real collection_cell_id.
+		type OrphanRow = {
+			project_id: string;
+			orphans: string;
+			orphans_processed: string;
+			orphans_with_issues: string;
+		};
+		const orphanRes = await query<OrphanRow>(
+			`SELECT p.id::text AS project_id,
+			        count(*) FILTER (
+			          WHERE cap.deleted_at IS NULL AND cap.collection_cell_id IS NULL
+			        )::text AS orphans,
+			        count(*) FILTER (
+			          WHERE cap.deleted_at IS NULL AND cap.collection_cell_id IS NULL
+			            AND cap.shot_load_completed_at IS NOT NULL
+			        )::text AS orphans_processed,
+			        count(*) FILTER (
+			          WHERE cap.deleted_at IS NULL AND cap.collection_cell_id IS NULL
+			            AND cap.missing_image_file_count > 0
+			        )::text AS orphans_with_issues
+			   FROM projects p
+			   LEFT JOIN captures cap ON cap.project_id = p.id
+			  WHERE p.slug = $1
+			    AND ${scope.sql}
+			  GROUP BY p.id`,
+			[projectSlug, ...scope.params]
+		);
+		const orphanInfo = orphanRes.rows[0];
+		if (orphanInfo && Number(orphanInfo.orphans) > 0) {
+			const n = Number(orphanInfo.orphans);
+			const processed = Number(orphanInfo.orphans_processed);
+			const issues = Number(orphanInfo.orphans_with_issues);
+			collections.push({
+				id: `__unassigned-${orphanInfo.project_id}`,
+				slug: `__unassigned-${projectSlug}`,
+				name: 'Unassigned',
+				description: 'Captures not linked to any collection',
+				projectId: orphanInfo.project_id,
+				projectSlug,
+				createdAt: new Date(0).toISOString(),
+				updatedAt: new Date(0).toISOString(),
+				captureCount: n,
+				stages: {
+					plan: 'dark',
+					analysis: 'dark',
+					capture: issues > 0 ? 'orange' : 'green',
+					review:
+						processed === n
+							? issues > 0
+								? 'orange'
+								: 'green'
+							: processed > 0
+								? 'orange'
+								: 'dark'
+				},
+				currentStage: 'capture',
+				virtual: true
+			});
+		}
+
 		return json({ collections });
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);

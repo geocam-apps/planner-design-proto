@@ -32,6 +32,9 @@ export interface CollectionSummary {
 	captureCount: number;
 	stages: StageMap<CollectionStageKey>;
 	currentStage: CollectionStageKey;
+	// True when this is a virtual catch-all for captures that aren't linked to
+	// any real collection (collection_cell_id IS NULL). Not a row in cell_maps.
+	virtual?: boolean;
 }
 
 export interface CaptureSummary {
