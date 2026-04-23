@@ -9,10 +9,28 @@
 	import { createProjectSearch, setProjectSearch } from '$lib/search/state.svelte';
 	import { untrack } from 'svelte';
 
-	let { project }: { project: ProjectSummary } = $props();
+	let {
+		project,
+		externalSearchQuery
+	}: {
+		project: ProjectSummary;
+		// When set (and non-empty), drives the project's internal search without
+		// the user typing into its SearchBox. Used by the home-page "deep search"
+		// mode to push the global query into every matching project at once.
+		externalSearchQuery?: string;
+	} = $props();
 
 	const search = createProjectSearch(untrack(() => project.slug));
 	setProjectSearch(search);
+
+	// Mirror externalSearchQuery into our per-project search state whenever it
+	// changes. Clearing it (undefined / empty) leaves whatever the user typed
+	// in the in-card search box intact.
+	$effect(() => {
+		const q = externalSearchQuery;
+		if (q == null) return;
+		if (q !== search.query) search.setQuery(q);
+	});
 
 	let userExpanded = $state(false);
 	let loadState = $state<'idle' | 'loading' | 'loaded' | 'error'>('idle');
